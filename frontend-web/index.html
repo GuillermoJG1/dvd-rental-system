@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Renta de DVDs</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Sistema de Renta de DVDs</h1>
+            <p>Gestión completa de tu videoclub</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('rentar')">📀 Rentar DVD</button>
+            <button class="tab" onclick="showTab('devolver')">↩️ Devolver</button>
+            <button class="tab" onclick="showTab('catalogo')">📚 Catálogo</button>
+            <button class="tab" onclick="showTab('reportes')">📊 Reportes</button>
+        </div>
+
+        <div class="content">
+            <!-- TAB: RENTAR DVD -->
+            <div id="rentar" class="tab-content active">
+                <h2>Nueva Renta de DVD</h2>
+                <div class="alert alert-info">
+                    Completa el formulario para registrar una nueva renta
+                </div>
+
+                <div class="form-group">
+                    <label>Cliente</label>
+                    <select id="cliente">
+                        <option value="">Cargando clientes...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>DVD</label>
+                    <select id="dvd">
+                        <option value="">Cargando películas...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Personal que Atiende</label>
+                    <select id="staff">
+                        <option value="">Cargando personal...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Días de Renta</label>
+                    <input type="number" id="dias" value="7" min="1" max="30">
+                </div>
+
+                <button class="btn" onclick="rentarDVD()">🎬 Realizar Renta</button>
+                <button class="btn btn-secondary" onclick="limpiarFormulario()">🔄 Limpiar</button>
+            </div>
+
+            <!-- TAB: DEVOLVER -->
+            <div id="devolver" class="tab-content">
+                <h2>Devolver DVDs</h2>
+                <div class="alert alert-info">
+                    Rentas activas pendientes de devolución
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>DVD</th>
+                            <th>Fecha Renta</th>
+                            <th>Fecha Límite</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-devolver">
+                        <tr>
+                            <td colspan="6" style="text-align: center;">Cargando rentas activas...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- TAB: CATÁLOGO -->
+            <div id="catalogo" class="tab-content">
+                <h2>Catálogo de DVDs</h2>
+                <div class="alert alert-info">
+                    Todos los DVDs disponibles en el sistema
+                </div>
+
+                <div class="card-grid" id="catalogo-grid">
+                    <p style="text-align: center; padding: 20px;">Cargando catálogo...</p>
+                </div>
+            </div>
+
+            <!-- TAB: REPORTES -->
+            <div id="reportes" class="tab-content">
+                <h2>Reportes y Estadísticas</h2>
+
+                <div class="card-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">...</div>
+                        <div class="stat-label">Total Rentas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">...</div>
+                        <div class="stat-label">Rentas Activas</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">$...</div>
+                        <div class="stat-label">Ganancias Totales</div>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>📊 DVDs Más Rentados</h3>
+                    <button class="btn" onclick="cargarReporteMasRentados()">🔄 Cargar Reporte</button>
+                    <div id="reporte-mas-rentados" style="margin-top: 20px;">
+                        <p style="text-align: center; color: #666;">Haz clic en "Cargar Reporte" para ver los datos</p>
+                    </div>
+                </div>
+
+                <div class="report-section">
+                    <h3>💰 Ganancias por Personal</h3>
+                    <button class="btn" onclick="cargarReporteStaff()">🔄 Cargar Reporte</button>
+                    <div id="reporte-staff" style="margin-top: 20px;">
+                        <p style="text-align: center; color: #666;">Haz clic en "Cargar Reporte" para ver los datos</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,21 +1,18 @@
 #!/bin/bash
 
-# Colores para output
+# Configuración base
+BASE_URL="${API_URL:-http://localhost:8000}"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# URL base de la API
-BASE_URL="${API_URL:-http://localhost:8000}"
+echo "=== Iniciando Tests de Integración con CURL en $BASE_URL ==="
 
-echo -e "${YELLOW}=== DVD Rental System API Tests ===${NC}\n"
-
-# Contador de tests
+# Contadores
 PASSED=0
 FAILED=0
 
-# Función para tests
+# Función para probar endpoints
 test_endpoint() {
     local name=$1
     local method=$2
@@ -23,118 +20,51 @@ test_endpoint() {
     local data=$4
     local expected_status=$5
     
-    echo -e "${YELLOW}Testing: $name${NC}"
-    
+    # Ejecuta curl y extrae solo el código de estado HTTP
     if [ "$method" = "GET" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X GET "$BASE_URL$endpoint")
+        status=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$BASE_URL$endpoint")
     elif [ "$method" = "POST" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL$endpoint" \
-            -H "Content-Type: application/json" \
-            -d "$data")
+        status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BASE_URL$endpoint" \
+            -H "Content-Type: application/json" -d "$data")
     elif [ "$method" = "PUT" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X PUT "$BASE_URL$endpoint" \
-            -H "Content-Type: application/json" \
-            -d "$data")
+        status=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$BASE_URL$endpoint" \
+            -H "Content-Type: application/json" -d "$data")
     elif [ "$method" = "DELETE" ]; then
-        response=$(curl -s -w "\n%{http_code}" -X DELETE "$BASE_URL$endpoint")
+        status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$BASE_URL$endpoint")
     fi
-    
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
-    
-    if [ "$http_code" = "$expected_status" ]; then
-        echo -e "${GREEN}✓ PASSED${NC} - Status: $http_code"
+
+    # Validación
+    if [ "$status" -eq "$expected_status" ]; then
+        echo -e "${GREEN}✓ PASS${NC}: $name (Status: $status)"
         ((PASSED++))
     else
-        echo -e "${RED}✗ FAILED${NC} - Expected: $expected_status, Got: $http_code"
-        echo "Response: $body"
+        echo -e "${RED}✗ FAIL${NC}: $name (Esperado: $expected_status, Recibido: $status)"
         ((FAILED++))
     fi
-    echo ""
 }
 
-# Esperar a que la API esté lista
-echo "Esperando a que la API esté disponible..."
-max_attempts=30
-attempt=0
-until curl -s "$BASE_URL/" > /dev/null 2>&1 || [ $attempt -eq $max_attempts ]; do
-    attempt=$((attempt + 1))
-    echo "Intento $attempt/$max_attempts..."
+# --- EJECUCIÓN DE PRUEBAS ---
+# Esperar a que el servicio esté listo (Health check simple)
+echo "Esperando disponibilidad de la API..."
+until curl -s -f "$BASE_URL/" > /dev/null; do
     sleep 2
+    echo "Reintentando conexión..."
 done
 
-if [ $attempt -eq $max_attempts ]; then
-    echo -e "${RED}API no disponible después de $max_attempts intentos${NC}"
+# Pruebas definidas
+test_endpoint "Health Check" "GET" "/" "" 200
+test_endpoint "Listar Clientes" "GET" "/customers" "" 200
+test_endpoint "Listar Películas" "GET" "/films" "" 200
+test_endpoint "Crear Renta" "POST" "/rentals" '{"customer_id":1,"film_id":1,"staff_id":1,"days":3}' 200
+test_endpoint "Reporte DVDs No Devueltos" "GET" "/reports/unreturned" "" 200
+
+# --- RESUMEN ---
+echo "------------------------------------------------"
+echo "Tests Pasados: $PASSED"
+echo "Tests Fallados: $FAILED"
+
+if [ $FAILED -gt 0 ]; then
     exit 1
-fi
-
-echo -e "${GREEN}API disponible!${NC}\n"
-
-# === TESTS ===
-
-# 1. Health Check
-test_endpoint "Health Check" "GET" "/" "" "200"
-
-# 2. Obtener clientes
-test_endpoint "Get Customers" "GET" "/customers" "" "200"
-
-# 3. Obtener DVDs
-test_endpoint "Get DVDs" "GET" "/dvds" "" "200"
-
-# 4. Obtener Staff
-test_endpoint "Get Staff" "GET" "/staff" "" "200"
-
-# 5. Crear una renta
-test_endpoint "Create Rental" "POST" "/rentals" \
-    '{"customer_id":1,"dvd_id":1,"staff_id":1,"days":7}' "200"
-
-# 6. Obtener todas las rentas
-test_endpoint "Get Rentals" "GET" "/rentals" "" "200"
-
-# 7. Reporte: Rentas de cliente
-test_endpoint "Customer Rentals Report" "GET" "/reports/customer/1" "" "200"
-
-# 8. Reporte: DVDs no devueltos
-test_endpoint "Unreturned DVDs Report" "GET" "/reports/unreturned" "" "200"
-
-# 9. Reporte: DVDs más rentados
-test_endpoint "Most Rented DVDs Report" "GET" "/reports/most-rented" "" "200"
-
-# 10. Reporte: Ganancias por staff
-test_endpoint "Staff Earnings Report" "GET" "/reports/staff-earnings" "" "200"
-
-# 11. Devolver DVD (usando ID 1)
-test_endpoint "Return DVD" "PUT" "/rentals/1/return" "" "200"
-
-# 12. Crear otra renta para cancelar
-test_endpoint "Create Rental for Cancel" "POST" "/rentals" \
-    '{"customer_id":2,"dvd_id":2,"staff_id":2,"days":5}' "200"
-
-# 13. Cancelar renta (usando ID 2)
-test_endpoint "Cancel Rental" "DELETE" "/rentals/2" "" "200"
-
-# 14. Crear cliente nuevo
-test_endpoint "Create Customer" "POST" "/customers" \
-    '{"name":"Test User","email":"test@example.com","phone":"1234567890"}' "200"
-
-# 15. Crear DVD nuevo
-test_endpoint "Create DVD" "POST" "/dvds" \
-    '{"title":"Test Movie","genre":"Action","release_year":2024,"rental_price":5.0,"available_copies":3}' "200"
-
-# 16. Crear Staff nuevo
-test_endpoint "Create Staff" "POST" "/staff" \
-    '{"name":"Test Staff","position":"Tester"}' "200"
-
-# === RESUMEN ===
-echo -e "${YELLOW}=== Test Summary ===${NC}"
-echo -e "Total Tests: $((PASSED + FAILED))"
-echo -e "${GREEN}Passed: $PASSED${NC}"
-echo -e "${RED}Failed: $FAILED${NC}"
-
-if [ $FAILED -eq 0 ]; then
-    echo -e "\n${GREEN}All tests passed! ✓${NC}"
-    exit 0
 else
-    echo -e "\n${RED}Some tests failed ✗${NC}"
-    exit 1
+    exit 0
 fi

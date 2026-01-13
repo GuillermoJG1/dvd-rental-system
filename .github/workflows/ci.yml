@@ -1,0 +1,44 @@
+name: CI - DVD Rental System
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v3
+
+      - name: Levantar servicios con Docker Compose
+        # Usa el archivo docker-compose.yml proporcionado para levantar DB y Backend
+        # --build asegura que la imagen de la API se construya con los cambios recientes
+        run: docker compose up -d --build
+
+      - name: Verificar estado de los contenedores
+        run: docker compose ps
+
+      - name: Esperar a que la Base de Datos esté lista
+        # Aunque hay healthchecks, es prudente dar un margen breve o verificar logs
+        run: |
+          echo "Esperando inicialización de servicios..."
+          sleep 15
+          docker compose logs postgres
+
+      - name: Ejecutar Tests con CURL
+        # Ejecuta el script de pruebas contra localhost:8000 (expuesto en docker-compose)
+        run: |
+          chmod +x backend/tests/test_api.sh
+          ./backend/tests/test_api.sh
+
+      - name: Mostrar logs de la API en caso de fallo
+        if: failure()
+        run: docker compose logs backend
+
+      - name: Limpieza
+        if: always()
+        run: docker compose down
